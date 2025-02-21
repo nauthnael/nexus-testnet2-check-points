@@ -82,9 +82,12 @@ WEB_NODE_POINTS=0
 CLI_NODE_POINTS=0
 TOTAL_POINTS=0
 
+# Tạo một mảng tạm thời để lưu trữ dữ liệu
+NODES=$(echo "$RESPONSE" | jq -r '.data.nodes[] | select(.testnet_two_points > 0) | [.id, .nodeType, .testnet_two_points] | @tsv')
+
 echo "Danh sách các node có điểm testnet_two_points > 0:"
 echo "-----------------------------------------------"
-echo "$RESPONSE" | jq -r '.data.nodes[] | select(.testnet_two_points > 0) | [.id, .nodeType, .testnet_two_points] | @tsv' | while IFS=$'\t' read -r ID NODE_TYPE POINTS; do
+while IFS=$'\t' read -r ID NODE_TYPE POINTS; do
   # Xác định loại node
   if [[ "$NODE_TYPE" == "1" ]]; then
     NODE_TYPE_NAME="Web node"
@@ -99,7 +102,7 @@ echo "$RESPONSE" | jq -r '.data.nodes[] | select(.testnet_two_points > 0) | [.id
 
   # Hiển thị thông tin node
   echo "ID: $ID, Loại: $NODE_TYPE_NAME, Điểm: $POINTS"
-done
+done <<< "$NODES"
 
 # Hiển thị tổng số điểm theo loại node và tổng tất cả điểm
 echo "-----------------------------------------------"
