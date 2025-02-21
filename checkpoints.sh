@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Kiểm tra xem jq đã được cài đặt chưa
+if ! command -v jq &> /dev/null; then
+  echo "Lỗi: Công cụ 'jq' chưa được cài đặt. Vui lòng cài đặt 'jq' trước khi chạy script."
+  echo "Hướng dẫn cài đặt:"
+  echo "- Trên Ubuntu/Debian: sudo apt install -y jq"
+  echo "- Trên CentOS/RHEL: sudo yum install -y jq"
+  echo "- Trên macOS: brew install jq"
+  exit 1
+fi
+
 # Kiểm tra xem người dùng đã cung cấp địa chỉ ví chưa
 if [[ -z "$1" ]]; then
   echo "Vui lòng cung cấp địa chỉ ví Nexus làm tham số."
@@ -22,19 +32,44 @@ HEADERS=(
   -H "Referer: https://app.nexus.xyz/"
 )
 
-# Gửi request và nhận response
-RESPONSE=$(curl -s "${URL}" "${HEADERS[@]}")
+# Hàm để gửi request và xử lý response
+fetch_data() {
+  for ((i = 1; i <= 100; i++)); do
+    echo "Thử lần #$i"
 
-# Hiển thị toàn bộ kết quả JSON nhận được
-echo "Kết quả JSON nhận được:"
-echo "$RESPONSE"
+    # Gửi request và nhận response
+    RESPONSE=$(curl -s "${URL}" "${HEADERS[@]}")
+    echo "Response:"
+    echo "$RESPONSE"
+
+    # Kiểm tra nếu response không chứa "Gateway"
+    if [[ "$RESPONSE" != *"Gateway"* ]]; then
+      echo "Success! Breaking the loop."
+      echo "$RESPONSE" > response.json  # Lưu response vào file tạm thời để debug
+      break
+    fi
+
+    # Đợi 1 giây trước khi thử lại
+    sleep 1
+  done
+}
+
+# Gọi hàm fetch_data để lấy dữ liệu
+fetch_data
+
+# Đọc response từ file tạm thời (hoặc sử dụng biến RESPONSE)
+if [[ -f "response.json" ]]; then
+  RESPONSE=$(cat response.json)
+else
+  echo "Lỗi: Không thể lấy dữ liệu từ API."
+  exit 1
+fi
 
 # Lọc và xử lý dữ liệu
 WEB_NODE_POINTS=0
 CLI_NODE_POINTS=0
 TOTAL_POINTS=0
 
-# Sử dụng jq để phân tích JSON
 echo "Danh sách các node có điểm testnet_two_points > 0:"
 echo "-----------------------------------------------"
 echo "$RESPONSE" | jq -r '.data.nodes[] | select(.testnet_two_points > 0) | [.id, .nodeType, .testnet_two_points] | @tsv' | while IFS=$'\t' read -r ID NODE_TYPE POINTS; do
