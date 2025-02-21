@@ -42,11 +42,19 @@ fetch_data() {
     echo "Response:"
     echo "$RESPONSE"
 
-    # Kiểm tra nếu response là JSON hợp lệ và chứa dữ liệu nodes
-    if echo "$RESPONSE" | jq -e '.data.nodes' >/dev/null 2>&1; then
-      echo "Success! Dữ liệu JSON hợp lệ."
-      echo "$RESPONSE" > response.json  # Lưu response vào file tạm thời để debug
-      break
+    # Kiểm tra nếu response là JSON hợp lệ và chứa dữ liệu nodes không rỗng
+    if echo "$RESPONSE" | jq -e '.data.nodes | length > 0' >/dev/null 2>&1; then
+      # Kiểm tra nếu walletAddress trong JSON khớp với địa chỉ ví đã nhập
+      RESPONSE_WALLET=$(echo "$RESPONSE" | jq -r '.data.walletAddress')
+      if [[ "$RESPONSE_WALLET" == "$WALLET" ]]; then
+        echo "Success! Dữ liệu JSON hợp lệ và chứa đúng walletAddress."
+        echo "$RESPONSE" > response.json  # Lưu response vào file tạm thời để debug
+        break
+      else
+        echo "Lỗi: walletAddress trong JSON không khớp với địa chỉ ví đã nhập."
+        echo "walletAddress trong JSON: $RESPONSE_WALLET"
+        echo "Địa chỉ ví đã nhập: $WALLET"
+      fi
     else
       echo "Lỗi: Phản hồi không hợp lệ hoặc không chứa dữ liệu nodes."
       echo "Phản hồi lỗi:"
