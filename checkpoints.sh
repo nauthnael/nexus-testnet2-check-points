@@ -35,22 +35,26 @@ HEADERS=(
 # Hàm để gửi request và xử lý response
 fetch_data() {
   for ((i = 1; i <= 100; i++)); do
-    echo "Thử lần #$i"
+    echo "Thử lần #$i..."
 
     # Gửi request và nhận response
     RESPONSE=$(curl -s "${URL}" "${HEADERS[@]}")
     echo "Response:"
     echo "$RESPONSE"
 
-    # Kiểm tra nếu response không chứa "Gateway"
-    if [[ "$RESPONSE" != *"Gateway"* ]]; then
-      echo "Success! Breaking the loop."
+    # Kiểm tra nếu response là JSON hợp lệ và chứa dữ liệu nodes
+    if echo "$RESPONSE" | jq -e '.data.nodes' >/dev/null 2>&1; then
+      echo "Success! Dữ liệu JSON hợp lệ."
       echo "$RESPONSE" > response.json  # Lưu response vào file tạm thời để debug
       break
+    else
+      echo "Lỗi: Phản hồi không hợp lệ hoặc không chứa dữ liệu nodes."
+      echo "Phản hồi lỗi:"
+      echo "$RESPONSE"
     fi
 
-    # Đợi 1 giây trước khi thử lại
-    sleep 1
+    # Đợi 4 giây trước khi thử lại
+    sleep 4
   done
 }
 
@@ -61,7 +65,7 @@ fetch_data
 if [[ -f "response.json" ]]; then
   RESPONSE=$(cat response.json)
 else
-  echo "Lỗi: Không thể lấy dữ liệu từ API."
+  echo "Lỗi: Không thể lấy dữ liệu từ API sau 100 lần thử."
   exit 1
 fi
 
