@@ -3,7 +3,7 @@
 # Kiểm tra xem người dùng đã cung cấp địa chỉ ví chưa
 if [[ -z "$1" ]]; then
   echo "Vui lòng cung cấp địa chỉ ví Nexus làm tham số."
-  echo "Ví dụ: curl <URL> | sh -s YOUR_WALLET_ADDRESS"
+  echo "Ví dụ: curl <URL> | bash -s YOUR_WALLET_ADDRESS"
   exit 1
 fi
 
