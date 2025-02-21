@@ -22,40 +22,40 @@ HEADERS=(
   -H "Referer: https://app.nexus.xyz/"
 )
 
-# Hàm để kiểm tra nodeType:2 và lấy ID
-extract_id_from_response() {
-  local response="$1"
-  # Sử dụng grep và regex để lọc ra ID có 7 chữ số từ nodeType:2
-  echo "$response" | grep -oP '(?<="nodeType":2,"id":")\d{7}'
-}
+# Gửi request và nhận response
+RESPONSE=$(curl -s "${URL}" "${HEADERS[@]}")
 
-# Vòng lặp thử nghiệm tối đa 100 lần
-for ((i=1; i<=100; i++)); do
-  echo "Thử lần #$i"
+# Hiển thị toàn bộ kết quả JSON nhận được
+echo "Kết quả JSON nhận được:"
+echo "$RESPONSE"
 
-  # Gửi request và nhận response
-  RESPONSE=$(curl -s "${URL}" "${HEADERS[@]}")
-  
-  # Hiển thị toàn bộ kết quả JSON nhận được
-  echo "Kết quả JSON nhận được:"
-  echo "$RESPONSE"
+# Lọc và xử lý dữ liệu
+WEB_NODE_POINTS=0
+CLI_NODE_POINTS=0
+TOTAL_POINTS=0
 
-  # Kiểm tra nếu response không chứa "Gateway"
-  if [[ "$RESPONSE" != *"Gateway"* ]]; then
-    echo "Success! Breaking the loop."
-
-    # Lấy ID từ response
-    ID=$(extract_id_from_response "$RESPONSE")
-    if [[ -n "$ID" ]]; then
-      echo "Đã tìm thấy ID với nodeType:2 -> ID: $ID"
-      break
-    else
-      echo "Không tìm thấy ID hợp lệ với nodeType:2 trong kết quả JSON."
-    fi
-  else
-    echo "Response chứa 'Gateway'. Thử lại sau 1 giây..."
+# Sử dụng jq để phân tích JSON
+echo "Danh sách các node có điểm testnet_two_points > 0:"
+echo "-----------------------------------------------"
+echo "$RESPONSE" | jq -r '.data.nodes[] | select(.testnet_two_points > 0) | [.id, .nodeType, .testnet_two_points] | @tsv' | while IFS=$'\t' read -r ID NODE_TYPE POINTS; do
+  # Xác định loại node
+  if [[ "$NODE_TYPE" == "1" ]]; then
+    NODE_TYPE_NAME="Web node"
+    WEB_NODE_POINTS=$((WEB_NODE_POINTS + POINTS))
+  elif [[ "$NODE_TYPE" == "2" ]]; then
+    NODE_TYPE_NAME="CLI node"
+    CLI_NODE_POINTS=$((CLI_NODE_POINTS + POINTS))
   fi
 
-  # Đợi 1 giây trước khi thử lại
-  sleep 1
+  # Cập nhật tổng số điểm
+  TOTAL_POINTS=$((TOTAL_POINTS + POINTS))
+
+  # Hiển thị thông tin node
+  echo "ID: $ID, Loại: $NODE_TYPE_NAME, Điểm: $POINTS"
 done
+
+# Hiển thị tổng số điểm theo loại node và tổng tất cả điểm
+echo "-----------------------------------------------"
+echo "Tổng số điểm Web node: $WEB_NODE_POINTS"
+echo "Tổng số điểm CLI node: $CLI_NODE_POINTS"
+echo "Tổng tất cả điểm: $TOTAL_POINTS"
