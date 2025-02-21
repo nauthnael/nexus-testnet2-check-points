@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Yêu cầu người dùng nhập địa chỉ ví Nexus
-read -p "Nhập địa chỉ ví Nexus của bạn: " WALLET
-
-# Kiểm tra xem người dùng đã nhập địa chỉ ví chưa
-if [[ -z "$WALLET" ]]; then
-  echo "Bạn chưa nhập địa chỉ ví. Vui lòng thử lại."
+# Kiểm tra xem người dùng đã cung cấp địa chỉ ví chưa
+if [[ -z "$1" ]]; then
+  echo "Vui lòng cung cấp địa chỉ ví Nexus làm tham số."
+  echo "Ví dụ: curl <URL> | sh -s YOUR_WALLET_ADDRESS"
   exit 1
 fi
+
+WALLET="$1"
 
 # URL để gửi request
 URL="https://beta.orchestrator.nexus.xyz/users/${WALLET}"
